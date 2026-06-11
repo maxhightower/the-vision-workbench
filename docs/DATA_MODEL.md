@@ -55,21 +55,31 @@ side by side. V1 has create/switch/rename/compare — no merging.
 ### Workstream
 A pluggable workflow definition:
 ```
-{ id, name, description, requiredTools[], outputType, outputTitle,
+{ id, name, description, requiredTools[], inputs[], outputType, outputTitle,
   prompt(ctx), offlineTemplate }
 ```
 Built-ins live in `server/workstreams.js`. A workstream is *available* when
 its `requiredTools` are configured in the Tool Shed (e.g. Market Scan needs
-`search`). Custom workstreams can be added per space as
+`search`).
+
+`inputs` is the workstream's input schema: fields the user must provide when
+starting a process, e.g. Refine Understanding declares
+`[{ key: "guidance", label, type: "textarea", required: true, placeholder }]`.
+The UI renders a form for them; the server validates required fields (400 on
+missing) and stores the values on the process record. In prompts the values
+appear as `ctx.input.<key>`.
+
+Custom workstreams can be added per space as
 `.workbench/workstreams/<name>.json`:
 ```json
 {
   "id": "devil-advocate",
   "name": "Devil's Advocate",
   "description": "Argue against the idea as hard as possible.",
+  "inputs": [{ "key": "angle", "label": "Attack from this angle", "required": false }],
   "outputType": "critique",
   "outputTitle": "Devil's Advocate",
-  "promptTemplate": "Seed:\n{{seed}}\n\nUnderstanding:\n{{understanding}}\n\nArgue against this idea…"
+  "promptTemplate": "Seed:\n{{seed}}\n\nUnderstanding:\n{{understanding}}\n\nAngle: {{input.angle}}\n\nArgue against this idea…"
 }
 ```
 
@@ -86,6 +96,7 @@ buffered in server memory and streamed to the UI over SSE.
   "outputType": "mvp_scope",
   "branch": "main",
   "provider": "ollama",
+  "input": { "guidance": "…user-provided workstream input, if any…" },
   "status": "running | completed | failed | stopped",
   "visibility": "foreground | background",
   "startedAt": "…", "endedAt": "…",

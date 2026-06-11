@@ -21,6 +21,7 @@ export function mountProcessPanel(container, record, hooks = {}) {
           <strong>${escapeHtml(record.workstreamName)}</strong>
           <span class="badge ${status}" data-role="status">${status}</span>
           <span class="faint">via ${escapeHtml(record.provider)} · branch ${escapeHtml(record.branch)}</span>
+          ${record.input?.guidance ? `<span class="faint" title="${escapeHtml(record.input.guidance)}">· “${escapeHtml(record.input.guidance.slice(0, 70))}${record.input.guidance.length > 70 ? '…' : ''}”</span>` : ''}
         </div>
         <div class="row">
           <button class="btn-small" data-act="apply" style="display:none">Apply to Current Understanding</button>
@@ -60,7 +61,9 @@ export function mountProcessPanel(container, record, hooks = {}) {
       btn('save').style.display = '';
     }
     if (next === 'completed') {
-      if (record.workstreamId === 'cultivate-seed' && extractRevisedUnderstanding(output)) {
+      // Any workstream that emits a "Current Understanding (revised)" section
+      // (Cultivate Seed, Refine Understanding, …) can be applied to the core.
+      if (extractRevisedUnderstanding(output)) {
         btn('apply').style.display = '';
       }
       if (record.workstreamId === 'generate-branches') {
@@ -127,10 +130,19 @@ export function mountProcessPanel(container, record, hooks = {}) {
   btn('apply').addEventListener('click', async () => {
     const revised = extractRevisedUnderstanding(output);
     if (!revised) return;
-    if (!confirm('Replace the Current Understanding on this branch with the revised version?')) return;
+    if (!confirm('Replace the Current Understanding on this branch with the revised version?\n(The previous version is saved to Outputs automatically.)')) return;
     try {
+      // Snapshot the outgoing understanding so refining never loses a version.
+      const space = await api.space(record.spaceId);
+      if (space.understanding.trim() && space.understanding.trim() !== revised.trim()) {
+        await api.saveOutput(record.spaceId, {
+          title: `Understanding before ${record.workstreamName} (${record.branch})`,
+          type: 'current_understanding',
+          content: space.understanding,
+        });
+      }
       await api.saveUnderstanding(record.spaceId, revised);
-      toast('Current Understanding updated.');
+      toast('Current Understanding updated — previous version saved to Outputs.');
       hooks.onApplied?.(revised);
     } catch (err) {
       toast(err.message, true);

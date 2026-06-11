@@ -34,8 +34,14 @@ console.log('Workbench smoke test\n');
 const seed = await req('POST', '/api/orchard', {
   seedText: 'A pocket greenhouse that texts you when your basil is sad.',
   title: 'Sad Basil',
+  tags: ['product', 'Hardware Thing', 'product', '!!bad!!'],
 });
 check('plant seed creates idea space', seed.id && seed.currentBranch === 'main');
+check('tags sanitized and deduped', JSON.stringify(seed.tags) === '["product","hardware-thing"]', JSON.stringify(seed.tags));
+
+await req('PUT', `/api/spaces/${seed.id}/tags`, { tags: ['product', 'experiment'] });
+const tagged = await req('GET', `/api/spaces/${seed.id}`);
+check('tags are editable', JSON.stringify(tagged.tags) === '["product","experiment"]');
 
 const orchard = await req('GET', '/api/orchard');
 check('orchard lists the space', orchard.some((s) => s.id === seed.id));
@@ -53,9 +59,32 @@ check('understanding is editable', edited.understanding.includes('IoT greenhouse
 
 // 3. Workstreams (offline provider) — market scan gated by tool shed
 const workstreams = await req('GET', `/api/spaces/${seed.id}/workstreams`);
-check('6 built-in workstreams', workstreams.length === 6, `got ${workstreams.length}`);
+check('7 built-in workstreams', workstreams.length === 7, `got ${workstreams.length}`);
 const marketScan = workstreams.find((w) => w.id === 'market-scan');
 check('market scan unavailable without search tool', marketScan.available === false);
+const refine = workstreams.find((w) => w.id === 'refine-understanding');
+check('refine declares a required guidance input', refine.inputs?.[0]?.key === 'guidance' && refine.inputs[0].required);
+
+// 3b. Refine Understanding: input validation + run
+const noInput = await fetch(`${BASE}/api/spaces/${seed.id}/processes`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ workstreamId: 'refine-understanding' }),
+});
+check('refine without guidance is rejected', noInput.status === 400);
+
+let refineProc = await req('POST', `/api/spaces/${seed.id}/processes`, {
+  workstreamId: 'refine-understanding',
+  input: { guidance: 'It is not about IoT hardware — the core is the notification personality.' },
+});
+check('refine process stores input', refineProc.input.guidance.includes('notification personality'));
+for (let i = 0; i < 40 && refineProc.status === 'running'; i++) {
+  await sleep(250);
+  refineProc = await req('GET', `/api/processes/${refineProc.id}`);
+}
+check('refine completes with revised-understanding section',
+  refineProc.status === 'completed' && refineProc.output.includes('Current Understanding (revised)'),
+  refineProc.status);
 
 // 4. Run a process, hide it, let it finish in background
 const proc1 = await req('POST', `/api/spaces/${seed.id}/processes`, {

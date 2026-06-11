@@ -11,7 +11,8 @@ async function request(method, url, body) {
 
 export const api = {
   orchard: () => request('GET', '/api/orchard'),
-  plantSeed: (seedText, title) => request('POST', '/api/orchard', { seedText, title }),
+  plantSeed: (seedText, title, tags) => request('POST', '/api/orchard', { seedText, title, tags }),
+  setTags: (id, tags) => request('PUT', `/api/spaces/${id}/tags`, { tags }),
 
   space: (id) => request('GET', `/api/spaces/${id}`),
   saveUnderstanding: (id, content) =>
@@ -33,8 +34,8 @@ export const api = {
   workstreams: (id) => request('GET', `/api/spaces/${id}/workstreams`),
 
   processes: (id) => request('GET', `/api/spaces/${id}/processes`),
-  startProcess: (id, workstreamId) =>
-    request('POST', `/api/spaces/${id}/processes`, { workstreamId }),
+  startProcess: (id, workstreamId, input) =>
+    request('POST', `/api/spaces/${id}/processes`, { workstreamId, input }),
   process: (pid) => request('GET', `/api/processes/${pid}`),
   stopProcess: (pid) => request('POST', `/api/processes/${pid}/stop`, {}),
   setProcessVisibility: (pid, visibility) =>

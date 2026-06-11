@@ -53,6 +53,15 @@ const routes = [
     },
   ],
 
+  [
+    'PUT',
+    /^\/api\/spaces\/([a-z0-9-]+)\/tags$/,
+    async (req, res, [id]) => {
+      const { tags } = await readJsonBody(req);
+      return { tags: store.setTags(id, tags).tags };
+    },
+  ],
+
   // ---- branches
   ['GET', /^\/api\/spaces\/([a-z0-9-]+)\/branches$/, (req, res, [id]) => ({
     currentBranch: store.readSettings(id).currentBranch,
@@ -121,7 +130,7 @@ const routes = [
     'POST',
     /^\/api\/spaces\/([a-z0-9-]+)\/processes$/,
     async (req, res, [id]) => {
-      const { workstreamId } = await readJsonBody(req);
+      const { workstreamId, input } = await readJsonBody(req);
       const toolShed = readToolShed();
       const workstream = getWorkstream(id, workstreamId, toolShed);
       if (!workstream) throw new HttpError(404, `Unknown workstream: ${workstreamId}`);
@@ -131,7 +140,7 @@ const routes = [
           `Workstream "${workstream.name}" needs tools not configured in the Tool Shed: ${workstream.missingTools.join(', ')}`
         );
       }
-      return proc.startProcess(id, workstream, toolShed);
+      return proc.startProcess(id, workstream, toolShed, input);
     },
   ],
   ['GET', /^\/api\/processes\/([a-z0-9-]+)$/, (req, res, [pid]) => proc.getProcess(pid)],

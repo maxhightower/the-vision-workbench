@@ -2,6 +2,7 @@ import { api } from '../api.js';
 import { renderMarkdown, escapeHtml } from '../md.js';
 import { toast, timeAgo } from '../app.js';
 import { mountProcessPanel } from './processPanel.js';
+import { mountTagRow } from './tags.js';
 
 /**
  * The Idea Space view: header + tabs (Core radial / Branches / Processes /
@@ -52,9 +53,13 @@ async function renderCore(body, space, cleanups) {
           <span class="faint" id="cu-status"></span>
         </div>
         <textarea id="cu-text" spellcheck="false">${escapeHtml(space.understanding)}</textarea>
+        <div id="cu-tags"></div>
         <div class="core-foot">
           <span class="faint" title="${escapeHtml(space.seed.slice(0, 400))}">🌱 seeded ${timeAgo(space.createdAt)}</span>
-          <button class="btn-small" id="cu-save">Save understanding</button>
+          <div class="row">
+            <button class="btn-small" id="cu-snapshot" title="Save this version of the understanding as an Output">📌 Snapshot</button>
+            <button class="btn-small" id="cu-save">Save understanding</button>
+          </div>
         </div>
       </div>
     </div>
@@ -87,6 +92,42 @@ async function renderCore(body, space, cleanups) {
   body.querySelector('#cu-save').addEventListener('click', save);
   cleanups.push(() => { clearTimeout(saveTimer); save(); });
 
+  // Intent tags: direct and guide the vision; saved immediately on toggle and
+  // fed into every workstream prompt.
+  let tagTimer = null;
+  mountTagRow(body.querySelector('#cu-tags'), {
+    selected: space.tags || [],
+    onChange: (tags) => {
+      clearTimeout(tagTimer);
+      tagTimer = setTimeout(async () => {
+        try {
+          await api.setTags(space.id, tags);
+          statusEl.textContent = 'tags saved';
+          setTimeout(() => { if (statusEl.textContent === 'tags saved') statusEl.textContent = ''; }, 1500);
+        } catch (err) {
+          toast(err.message, true);
+        }
+      }, 500);
+    },
+  });
+  cleanups.push(() => clearTimeout(tagTimer));
+
+  body.querySelector('#cu-snapshot').addEventListener('click', async () => {
+    const title = prompt('Name this version:', `Understanding (${space.currentBranch}) — ${new Date().toLocaleDateString()}`);
+    if (title === null) return;
+    try {
+      await save();
+      await api.saveOutput(space.id, {
+        title: title || 'Understanding version',
+        type: 'current_understanding',
+        content: textEl.value,
+      });
+      toast('Snapshot saved to Outputs.');
+    } catch (err) {
+      toast(err.message, true);
+    }
+  });
+
   // --- ghost workstream buttons arranged radially
   const radial = body.querySelector('#radial');
   const slot = body.querySelector('#process-slot');
@@ -105,6 +146,9 @@ async function renderCore(body, space, cleanups) {
     slot.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
+  // Shuffle which region each button lands in so positions differ every visit.
+  const slots = workstreams.map((_, i) => i).sort(() => Math.random() - 0.5);
+
   workstreams.forEach((ws, i) => {
     const btn = document.createElement('button');
     btn.className = 'ghost-btn';
@@ -113,8 +157,12 @@ async function renderCore(body, space, cleanups) {
       ? ws.description
       : `${ws.description}\n\nNeeds in the Tool Shed: ${ws.missingTools.join(', ')}`;
     btn.disabled = !ws.available;
-    positionRadially(btn, i, workstreams.length);
+    positionFloating(btn, slots[i], workstreams.length);
     btn.addEventListener('click', async () => {
+      if (ws.inputs.length) {
+        openInputForm(ws);
+        return;
+      }
       btn.disabled = true;
       try {
         const record = await api.startProcess(space.id, ws.id);
@@ -128,19 +176,70 @@ async function renderCore(body, space, cleanups) {
     radial.appendChild(btn);
   });
 
+  // Workstreams that declare inputs (e.g. Refine Understanding) collect them
+  // in a small form where the process panel will appear.
+  function openInputForm(ws) {
+    closePanel?.();
+    closePanel = null;
+    slot.innerHTML = `
+      <div class="process-panel">
+        <div class="panel-head">
+          <div class="row"><strong>${escapeHtml(ws.name)}</strong>
+          <span class="faint">${escapeHtml(ws.description)}</span></div>
+        </div>
+        <div style="padding:14px 16px">
+          ${ws.inputs
+            .map(
+              (f) => `
+            <label>${escapeHtml(f.label || f.key)}${f.required ? '' : ' <span class="faint">(optional)</span>'}</label>
+            ${
+              f.type === 'textarea'
+                ? `<textarea data-input="${f.key}" style="min-height:110px" placeholder="${escapeHtml(f.placeholder || '')}"></textarea>`
+                : `<input type="text" data-input="${f.key}" placeholder="${escapeHtml(f.placeholder || '')}" />`
+            }`
+            )
+            .join('')}
+          <div class="row" style="margin-top:12px;justify-content:flex-end">
+            <button class="btn-small" data-act="cancel">Cancel</button>
+            <button class="btn-small btn-primary" data-act="run">Run ${escapeHtml(ws.name)}</button>
+          </div>
+        </div>
+      </div>`;
+    slot.querySelector('[data-input]')?.focus();
+    slot.querySelector('[data-act=cancel]').addEventListener('click', () => (slot.innerHTML = ''));
+    slot.querySelector('[data-act=run]').addEventListener('click', async () => {
+      const input = {};
+      slot.querySelectorAll('[data-input]').forEach((el) => (input[el.dataset.input] = el.value));
+      try {
+        const record = await api.startProcess(space.id, ws.id, input);
+        openPanel(record);
+      } catch (err) {
+        toast(err.message, true);
+      }
+    });
+    slot.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
   // Re-attach the most recent foreground running process (e.g. after nav).
   const processes = await api.processes(space.id);
   const foreground = processes.find((p) => p.visibility === 'foreground' && p.status === 'running');
   if (foreground) openPanel(foreground);
 }
 
-function positionRadially(el, index, total) {
-  // Distribute around an ellipse, starting at the top.
-  const angle = (index / total) * 2 * Math.PI - Math.PI / 2;
-  const rx = 42; // percent of container width
-  const ry = 44; // percent of container height
+function positionFloating(el, slot, total) {
+  // Ghost buttons float around the core: each gets a random spot inside its
+  // own angular region (so they never pile up), then drifts continuously.
+  const jitter = (Math.random() - 0.5) * ((2 * Math.PI) / total) * 0.7;
+  const angle = (slot / total) * 2 * Math.PI - Math.PI / 2 + jitter;
+  const rx = 34 + Math.random() * 11; // percent of container width
+  const ry = 32 + Math.random() * 13; // percent of container height
   el.style.left = `${50 + rx * Math.cos(angle)}%`;
   el.style.top = `${50 + ry * Math.sin(angle)}%`;
+  // Per-button drift parameters consumed by the ghost-drift keyframes.
+  el.style.setProperty('--dx', `${(Math.random() * 26 - 13).toFixed(1)}px`);
+  el.style.setProperty('--dy', `${(Math.random() * 22 - 11).toFixed(1)}px`);
+  el.style.animationDuration = `${(5 + Math.random() * 6).toFixed(2)}s`;
+  el.style.animationDelay = `-${(Math.random() * 6).toFixed(2)}s`;
 }
 
 // ================================================================ Branches

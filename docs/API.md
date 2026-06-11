@@ -27,7 +27,7 @@ All endpoints are JSON under `/api/`. The UI is a static SPA served from `/`.
 ## Workstreams & Processes
 | GET | `/api/spaces/:id/workstreams` | — | workstream defs with `available` / `missingTools` |
 | GET | `/api/spaces/:id/processes` | — | process records, newest first |
-| POST | `/api/spaces/:id/processes` | `{ workstreamId }` | starts a process (409 if required tools missing) |
+| POST | `/api/spaces/:id/processes` | `{ workstreamId, input? }` | starts a process (409 if required tools missing, 400 if a required input is missing) |
 | GET | `/api/processes/:pid` | — | one process record |
 | GET | `/api/processes/:pid/stream` | — | **SSE**: `snapshot` (full record so far) → `chunk` (text) → `end` (status) |
 | POST | `/api/processes/:pid/stop` | — | aborts a running process |

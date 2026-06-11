@@ -30,6 +30,7 @@ to get real generation.
 | **Orchard** | The home screen: every Idea Space you've planted. |
 | **Idea Space** | A repo-like container for one idea. If Workbench is GitHub, an Idea Space is a repo. |
 | **Current Understanding** | Workbench's evolving interpretation of the Seed. Always editable — the system can misunderstand you. |
+| **Intent tags** | Toggleable tag buttons under the Seed and Understanding boxes that direct and guide the vision (e.g. `product`, `community`, or your own). They're fed into every workstream prompt. |
 | **Branch** | An alternate version/direction of the idea, each with its own Current Understanding. |
 | **Workstream** | An agentic workflow you send the idea through (Cultivate Seed, Prune Scope, …). |
 | **Process** | A running instance of a workstream. Foreground = visible; background = hidden but still running (see the Processes tab). |
@@ -39,6 +40,7 @@ to get real generation.
 ## Workstreams (V1)
 
 - **Cultivate Seed** — clearer understanding, key themes, missing details. Can apply its revision straight to the Current Understanding.
+- **Refine Understanding** — you tell Workbench what it got wrong or what to push deeper on; it rewrites the Current Understanding honoring your guidance. Applying a revision auto-saves the previous version to Outputs.
 - **Generate Branches** — 3–5 divergent directions; create a real branch from any of them in one click.
 - **Prune Scope** — MVP scope / later features / non-goals.
 - **Test the Pitch** — one-liners, positioning options, clarity critique.

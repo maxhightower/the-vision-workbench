@@ -42,12 +42,28 @@ function broadcast(id, event) {
   if (event.type === 'end') entry.listeners.clear();
 }
 
-export function startProcess(spaceId, workstream, toolShed) {
+/** Validate user input against the workstream's declared input schema. */
+function validateInput(workstream, rawInput) {
+  const input = {};
+  for (const field of workstream.inputs || []) {
+    const value = rawInput?.[field.key];
+    if (typeof value === 'string' && value.trim()) {
+      input[field.key] = value.trim().slice(0, 8000);
+    } else if (field.required) {
+      throw new HttpError(400, `Workstream "${workstream.name}" requires input: ${field.label || field.key}`);
+    }
+  }
+  return input;
+}
+
+export function startProcess(spaceId, workstream, toolShed, rawInput) {
   const settings = readSettings(spaceId);
   const ctx = {
     seed: readSeed(spaceId),
     understanding: readUnderstanding(spaceId),
     branch: settings.currentBranch,
+    tags: settings.tags || [],
+    input: validateInput(workstream, rawInput),
   };
 
   const record = {
@@ -59,6 +75,7 @@ export function startProcess(spaceId, workstream, toolShed) {
     outputTitle: workstream.outputTitle,
     branch: settings.currentBranch,
     provider: toolShed.activeProvider,
+    input: ctx.input,
     status: 'running',
     visibility: 'foreground',
     startedAt: nowIso(),

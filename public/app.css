@@ -186,13 +186,41 @@ label { display: block; font-size: 13px; color: var(--text-dim); margin: 14px 0 
 }
 .seed-screen h1 { font-size: 30px; }
 .seed-screen textarea {
-  max-width: 640px;
-  min-height: 170px;
-  margin-top: 24px;
-  font-size: 16px;
+  max-width: 560px;
+  min-height: 84px;
+  margin-top: 20px;
+  font-size: 15px;
   background: var(--bg-card);
 }
 .seed-screen .btn-primary { margin-top: 18px; padding: 10px 36px; font-size: 15px; }
+.seed-tags { max-width: 560px; width: 100%; margin-top: 10px; }
+
+/* -------------------------------------------------------------- intent tags */
+
+.tag-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.tag-chip {
+  font-size: 12px;
+  padding: 3px 12px;
+  border-radius: 99px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text-dim);
+}
+.tag-chip:hover:not(:disabled) { border-color: var(--accent-dim); color: var(--text); }
+.tag-chip.on {
+  border-color: var(--accent-dim);
+  background: rgba(143, 214, 148, 0.12);
+  color: var(--accent);
+}
+.tag-add {
+  width: 76px !important;
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 99px;
+  border: 1px dashed var(--line);
+  background: transparent;
+}
+.tag-add:focus { border-style: solid; }
 
 /* ---------------------------------------------------------------- space shell */
 
@@ -256,6 +284,7 @@ label { display: block; font-size: 13px; color: var(--text-dim); margin: 14px 0 
   font-size: 15px;
 }
 .core-card textarea:focus { border: none; }
+.core-card #cu-tags { margin: 10px 0 2px; }
 .core-card .core-foot {
   display: flex;
   justify-content: space-between;
@@ -264,9 +293,15 @@ label { display: block; font-size: 13px; color: var(--text-dim); margin: 14px 0 
   min-height: 28px;
 }
 
+@keyframes ghost-drift {
+  from { transform: translate(-50%, -50%); }
+  to { transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% + var(--dy, 0px))); }
+}
+
 .ghost-btn {
   position: absolute;
   transform: translate(-50%, -50%);
+  animation: ghost-drift 8s ease-in-out infinite alternate;
   background: transparent;
   border: 1.5px dashed var(--accent-dim);
   color: var(--accent);
@@ -281,6 +316,7 @@ label { display: block; font-size: 13px; color: var(--text-dim); margin: 14px 0 
   opacity: 1;
   background: rgba(143, 214, 148, 0.08);
   border-style: solid;
+  animation-play-state: paused; /* hold still while the user reaches for it */
 }
 .ghost-btn:disabled {
   border-color: var(--line);
@@ -291,7 +327,11 @@ label { display: block; font-size: 13px; color: var(--text-dim); margin: 14px 0 
 
 @media (max-width: 860px) {
   .radial { flex-direction: column; min-height: 0; gap: 10px; padding-bottom: 10px; }
-  .ghost-btn { position: static; transform: none; }
+  .ghost-btn { position: static; transform: none; animation: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ghost-btn { animation: none; }
 }
 
 /* ---------------------------------------------------------------- process panel */

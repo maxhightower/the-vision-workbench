@@ -108,6 +108,7 @@ export function getSpaceSummary(spaceId) {
     createdAt: settings.createdAt,
     lastOpenedAt: settings.lastOpenedAt,
     currentBranch: settings.currentBranch,
+    tags: settings.tags || [],
     understandingPreview: understanding.slice(0, 240),
     branchesCount: listBranches(spaceId).length,
     outputsCount: listOutputs(spaceId).length,
@@ -115,7 +116,26 @@ export function getSpaceSummary(spaceId) {
   };
 }
 
-export function plantSeed({ seedText, title }) {
+/** Intent tags: short labels that direct how the idea should be interpreted. */
+export function sanitizeTags(tags) {
+  if (!Array.isArray(tags)) return [];
+  const clean = [];
+  for (const tag of tags) {
+    const t = String(tag).toLowerCase().trim().replace(/\s+/g, '-');
+    if (/^[a-z0-9][a-z0-9-]{0,23}$/.test(t) && !clean.includes(t)) clean.push(t);
+    if (clean.length >= 12) break;
+  }
+  return clean;
+}
+
+export function setTags(spaceId, tags) {
+  const settings = readSettings(spaceId);
+  settings.tags = sanitizeTags(tags);
+  writeSettings(spaceId, settings);
+  return settings;
+}
+
+export function plantSeed({ seedText, title, tags }) {
   if (!seedText || !seedText.trim()) throw new HttpError(400, 'Seed text is required');
   seedText = seedText.trim();
 
@@ -135,6 +155,7 @@ export function plantSeed({ seedText, title }) {
     createdAt,
     lastOpenedAt: createdAt,
     currentBranch: 'main',
+    tags: sanitizeTags(tags),
   };
 
   fs.mkdirSync(path.join(dir, '.workbench', 'workstreams'), { recursive: true });
