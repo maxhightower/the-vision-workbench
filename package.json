@@ -1,0 +1,16 @@
+{
+  "name": "workbench",
+  "version": "0.1.0",
+  "description": "Workbench — a local-first Idea Developer. Plant a Seed, grow an Idea Space.",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node server/index.js",
+    "smoke": "node scripts/smoke.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}
