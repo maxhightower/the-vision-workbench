@@ -1,153 +1,100 @@
-# Workbench data model
+# gstack UI data model
 
-Workbench is local-first: every entity below is a plain file or folder under
-`WORKBENCH_HOME` (default `~/Workbench`). Nothing lives only in a hidden app
-database; you can read, edit, back up, or version the whole tree yourself.
+gstack UI is local-first and keeps its own state — separate from the projects it
+drives — under `GSTACK_UI_HOME` (default `~/.gstack-ui`). It never writes into a
+project folder; only the gstack skills you run do, inside their own repo.
+
+```
+~/.gstack-ui/
+  settings.json            global CLI settings
+  projects.json            registered project directories
+  runs/<projectId>.json    per-project run history (transcripts)
+```
 
 ## Entities
 
-### Orchard
-The collection of Idea Spaces. On disk it is simply the
-`<WORKBENCH_HOME>/orchard/` directory; every subfolder containing
-`.workbench/settings.json` is an Idea Space. Orchard metadata (title, preview,
-counts, last opened) is derived at read time — there is no separate index to
-fall out of sync.
+### Skill (bundled catalog)
+A gstack slash-command, described in `server/catalog.json`. The `id` is the
+command name without the leading slash or any install prefix:
+```json
+{ "id": "review", "name": "Review", "phase": "review",
+  "interactive": false, "hint": "optional args placeholder",
+  "desc": "Staff-engineer code review; auto-fixes obvious issues." }
+```
+Skills are grouped into `phases` (Think → Plan → Design → Review → Test → Ship →
+Document → Reflect → Utilities) and surfaced by `GET /api/catalog`. The catalog
+is bundled and offline; edit the JSON and restart to change it.
 
-### IdeaSpace
-One folder per idea: `orchard/<slug>/`. The slug is the stable id.
-
-`.workbench/settings.json`:
+### Project
+A pointer to a real working directory where skills run. Stored in
+`projects.json`:
 ```json
 {
-  "id": "my-idea",
-  "uuid": "f4f9…",
-  "title": "My Idea",
-  "createdAt": "2026-06-11T18:00:00.000Z",
-  "lastOpenedAt": "2026-06-11T19:00:00.000Z",
-  "currentBranch": "main"
+  "id": "my-app",
+  "name": "My App",
+  "path": "/Users/you/code/my-app",
+  "createdAt": "2026-06-14T18:00:00.000Z",
+  "lastUsedAt": "2026-06-14T19:00:00.000Z"
 }
 ```
+The `id` is a slug of the name and is the stable URL key. A path must already
+exist on disk to be added.
 
-### Seed
-`.workbench/seed.md` — the user's original raw idea text. Written once when
-the space is planted and never overwritten; it is the fixed point every
-workstream can refer back to.
-
-### CurrentUnderstanding
-`branches/<branch>/current_understanding.md` — Workbench's evolving
-interpretation of the Seed, **per branch**. Freely editable by the user;
-saving from the Core view writes this file directly.
-
-### Branch
-A lightweight alternate direction of the idea ("branch" is the product
-metaphor, not git). Each branch is a folder under `branches/` holding its own
-Current Understanding. Metadata in `.workbench/branches.json`:
-```json
-[
-  { "name": "main", "createdAt": "…", "updatedAt": "…", "note": "Original direction" },
-  { "name": "b2b-pivot", "createdAt": "…", "updatedAt": "…", "note": "From Generate Branches: …" }
-]
-```
-`settings.currentBranch` selects the active one. Switching is instant
-(no working-tree mutation); comparing reads every branch's understanding
-side by side. V1 has create/switch/rename/compare — no merging.
-
-### Workstream
-A pluggable workflow definition:
-```
-{ id, name, description, requiredTools[], inputs[], outputType, outputTitle,
-  prompt(ctx), offlineTemplate }
-```
-Built-ins live in `server/workstreams.js`. A workstream is *available* when
-its `requiredTools` are configured in the Tool Shed (e.g. Market Scan needs
-`search`).
-
-`inputs` is the workstream's input schema: fields the user must provide when
-starting a process, e.g. Refine Understanding declares
-`[{ key: "guidance", label, type: "textarea", required: true, placeholder }]`.
-The UI renders a form for them; the server validates required fields (400 on
-missing) and stores the values on the process record. In prompts the values
-appear as `ctx.input.<key>`.
-
-Custom workstreams can be added per space as
-`.workbench/workstreams/<name>.json`:
-```json
-{
-  "id": "devil-advocate",
-  "name": "Devil's Advocate",
-  "description": "Argue against the idea as hard as possible.",
-  "inputs": [{ "key": "angle", "label": "Attack from this angle", "required": false }],
-  "outputType": "critique",
-  "outputTitle": "Devil's Advocate",
-  "promptTemplate": "Seed:\n{{seed}}\n\nUnderstanding:\n{{understanding}}\n\nAngle: {{input.angle}}\n\nArgue against this idea…"
-}
-```
-
-### Process
-A running instance of a Workstream. Records persist in
-`.workbench/processes.json` (most recent first, capped at 100); live output is
-buffered in server memory and streamed to the UI over SSE.
+### Run
+One invocation of a skill via the Claude Code CLI. Records persist in
+`runs/<projectId>.json` (newest first, capped at 50); live output is buffered in
+server memory and streamed to the UI over SSE.
 ```json
 {
   "id": "uuid",
-  "spaceId": "my-idea",
-  "workstreamId": "prune-scope",
-  "workstreamName": "Prune Scope",
-  "outputType": "mvp_scope",
-  "branch": "main",
-  "provider": "ollama",
-  "input": { "guidance": "…user-provided workstream input, if any…" },
+  "projectId": "my-app",
+  "skillId": "review",
+  "skillName": "Review",
+  "phase": "review",
+  "promptText": "/review the auth module",
+  "args": "the auth module",
+  "command": "claude -p \"/review the auth module\" --output-format stream-json --verbose --permission-mode acceptEdits",
+  "cwd": "/Users/you/code/my-app",
+  "model": null,
+  "permissionMode": "acceptEdits",
   "status": "running | completed | failed | stopped",
-  "visibility": "foreground | background",
   "startedAt": "…", "endedAt": "…",
-  "output": "…accumulated markdown…",
+  "output": "…accumulated text parsed from the stream…",
   "error": null,
-  "savedOutputId": null
+  "exitCode": 0
 }
 ```
-`visibility` is purely a UI concept: background processes keep running and can
-be reopened with their full output replayed. Process results are temporary
-until saved as an Output. Processes left `running` by a dead server are marked
-`stopped` on boot.
 
-### Output
-A saved result (generated or hand-entered): one markdown file with
-frontmatter in `outputs/`, editable in place.
-```markdown
----
-title: Pruned Scope (main)
-type: mvp_scope
-workstream: prune-scope
-branch: main
-createdAt: 2026-06-11T19:05:00.000Z
----
-## MVP Scope
-…
+**How a run executes.** The server spawns the configured `claudeBin` with:
 ```
-`type` values used by built-ins: `current_understanding`, `branch_directions`,
-`mvp_scope`, `pitch_variants`, `weak_roots`, `market_notes`, `note`.
+-p "<promptText>" --output-format stream-json --verbose
+   [--permission-mode <mode>] [--model <model>] [<extraArgs…>]
+```
+in the project's `cwd`. Each stdout line is a stream-json event; the server turns
+`assistant` text blocks into output, summarizes `tool_use` blocks as
+`` `→ Tool …` `` lines, and reads the final `result` for errors. Runs left
+`running` by a dead server are marked `stopped` on boot.
 
-### ToolShedConfig
-Global, at `<WORKBENCH_HOME>/tool_shed.json`:
+### Settings
+Global, at `settings.json`:
 ```json
 {
-  "activeProvider": "ollama",
-  "providers": {
-    "openai-compatible": { "baseUrl": "…", "apiKey": "…", "model": "…" },
-    "anthropic":         { "apiKey": "…", "model": "claude-sonnet-4-6" },
-    "ollama":            { "baseUrl": "http://localhost:11434", "model": "llama3.1" },
-    "offline":           {}
-  },
-  "tools": { "search": { "enabled": false } }
+  "claudeBin": "claude",
+  "model": "",
+  "permissionMode": "acceptEdits",
+  "commandPrefix": "",
+  "extraArgs": ""
 }
 ```
-API keys are stored locally only and masked in every API response
-(`hasApiKey` + `••••••••`). The `offline` provider needs no configuration and
-turns every workstream into a structured fill-in template.
+`permissionMode` is one of `acceptEdits`, `default`, `plan`, `bypassPermissions`.
+`commandPrefix` is prepended inside the slash command (`gstack-` → `/gstack-review`).
 
 ## Safety boundaries
 
-- All write paths validate ids/branch names against `[a-z0-9-]` patterns and
-  resolve inside the Idea Space folder — a process cannot touch files outside
-  its space.
-- V1 processes have exactly one side effect channel: the configured model API.
+- Project and run ids are validated against `[a-z0-9-]` patterns; run files
+  resolve only inside `RUNS_DIR`.
+- A project path must be an existing directory; gstack UI itself writes nothing
+  outside `GSTACK_UI_HOME`.
+- All real side effects happen inside the Claude Code CLI you configure, in the
+  project folder you point it at — choose `permissionMode` accordingly
+  (`bypassPermissions` removes the CLI's own guards).

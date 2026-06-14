@@ -1,14 +1,20 @@
-# Workbench 🌱
+# gstack UI ⚡
 
-A **local-first Idea Developer**. Plant a Seed, let Workbench help you refine it,
-branch it into alternate directions, run agentic workstreams over it, and save
-what you learn — all in plain files on your machine.
-
-This is the MVP: the Idea Developer loop only.
+A local web UI for **[gstack](https://github.com/garrytan/gstack)** — Garry Tan's
+opinionated Claude Code setup. Browse the gstack skills as a sprint pipeline,
+point them at any project folder, and **run them from the browser** while the
+output streams back live.
 
 ```
-Seed → Current Understanding → Workstreams → Process → Output → Branch → Refine
+Think → Plan → Design → Review → Test → Ship → Document → Reflect
 ```
+
+## What it does
+
+gstack skills are Claude Code slash commands (`/office-hours`, `/review`, `/qa`,
+`/ship`, …). gstack UI shells out to the **Claude Code CLI** to run them inside a
+project's working directory and streams the result into the page. It's a control
+deck on top of your existing gstack install — it doesn't reimplement any skill.
 
 ## Run it
 
@@ -18,74 +24,63 @@ node server/index.js     # or: npm start
 
 Open http://localhost:4810. No dependencies, no build step — just Node ≥ 18.
 
-Your data lives in `~/Workbench` (override with `WORKBENCH_HOME`). It works
-fully offline out of the box; configure a model provider in the **Tool Shed**
-to get real generation.
+You'll need the **Claude Code CLI** on your PATH (or set its path in Settings)
+and **gstack installed** into Claude Code:
 
-## The metaphor
+```bash
+git clone --single-branch --depth 1 https://github.com/garrytan/gstack.git \
+  ~/.claude/skills/gstack && cd ~/.claude/skills/gstack && ./setup
+```
 
-| Term | Meaning |
+## How to use it
+
+1. **Add a project** — point gstack UI at a code folder on your machine.
+2. **Pick a skill** from the pipeline. Optionally pass arguments.
+3. **Run** — gstack UI invokes the Claude Code CLI in that folder:
+
+   ```
+   claude -p "/review the auth module" --output-format stream-json --verbose \
+     --permission-mode acceptEdits
+   ```
+
+   Output streams into the run panel; the full history is kept per project.
+
+## Settings (how skills are launched)
+
+| Setting | Meaning |
 | --- | --- |
-| **Seed** | An early concept, not fully fleshed out — the raw idea text you start with. |
-| **Orchard** | The home screen: every Idea Space you've planted. |
-| **Idea Space** | A repo-like container for one idea. If Workbench is GitHub, an Idea Space is a repo. |
-| **Current Understanding** | Workbench's evolving interpretation of the Seed. Always editable — the system can misunderstand you. |
-| **Intent tags** | Toggleable tag buttons under the Seed and Understanding boxes that direct and guide the vision (e.g. `product`, `community`, or your own). They're fed into every workstream prompt. |
-| **Branch** | An alternate version/direction of the idea, each with its own Current Understanding. |
-| **Workstream** | An agentic workflow you send the idea through (Cultivate Seed, Prune Scope, …). |
-| **Process** | A running instance of a workstream. Foreground = visible; background = hidden but still running (see the Processes tab). |
-| **Output** | A saved result — generated or hand-entered. Temporary process results become Outputs only when you save them. |
-| **Tool Shed** | Where model providers and tools are configured. |
+| **Claude Code binary** | Name or path of the CLI. Default `claude`. |
+| **Model** | Optional `--model` override (e.g. `claude-opus-4-8`). |
+| **Permission mode** | `acceptEdits` (skills work without prompting), `bypassPermissions` (skips all guards — trusted repos only), `plan` (dry run), or `default`. |
+| **Command prefix** | If you installed gstack with its default prefix, set `gstack-` so skills run as `/gstack-review`. Blank for `./setup --no-prefix`. |
+| **Extra CLI arguments** | Appended verbatim, e.g. `--add-dir ../shared`. |
 
-## Workstreams (V1)
+## A note on interactive skills
 
-- **Cultivate Seed** — clearer understanding, key themes, missing details. Can apply its revision straight to the Current Understanding.
-- **Refine Understanding** — you tell Workbench what it got wrong or what to push deeper on; it rewrites the Current Understanding honoring your guidance. Applying a revision auto-saves the previous version to Outputs.
-- **Generate Branches** — 3–5 divergent directions; create a real branch from any of them in one click.
-- **Prune Scope** — MVP scope / later features / non-goals.
-- **Test the Pitch** — one-liners, positioning options, clarity critique.
-- **Find Weak Roots** — assumptions, contradictions, missing info, risky unknowns.
-- **Market Scan** — adjacent tools, competitors, positioning risks (enabled when a search tool is configured in the Tool Shed).
-
-Custom workstreams: drop a JSON file into an Idea Space's
-`.workbench/workstreams/` — see `docs/DATA_MODEL.md`.
-
-## Providers (Tool Shed)
-
-- **OpenAI-compatible** — any `/chat/completions` endpoint (OpenAI, vLLM, LM Studio, …)
-- **Anthropic** — the Messages API
-- **Ollama** — local models
-- **Offline** — no provider; workstreams emit structured fill-in templates so the loop still works
-
-All providers stream. API keys never leave the server or appear in the browser.
+Some skills (e.g. `/office-hours`, `/design-consultation`) are conversational.
+Headless runs are one-shot, so they're marked with `◐` — pass any answers they'd
+ask for as arguments. Autonomous skills (`/review`, `/qa`, `/ship`, …) work great
+unattended.
 
 ## On disk
 
-Everything is plain, portable, human-readable files:
+gstack UI keeps its own state in one inspectable folder and **never writes into
+your projects** (only the skills you run do, in their own repo):
 
 ```
-~/Workbench/
-  tool_shed.json                    provider/tool config (global)
-  orchard/
-    my-idea/                        one folder per Idea Space
-      README.md
-      .workbench/
-        seed.md                     the original raw idea (never overwritten)
-        settings.json               id, title, timestamps, current branch
-        branches.json               branch metadata
-        processes.json              process history
-        workstreams/                custom workstream definitions (*.json)
-      branches/
-        main/current_understanding.md
-        bold-pivot/current_understanding.md
-      outputs/                      saved results: markdown + frontmatter
-      notes/                        free-form notes
+~/.gstack-ui/                 (override with GSTACK_UI_HOME)
+  settings.json               claude binary, model, permission mode, prefix
+  projects.json               registered project directories
+  runs/<projectId>.json       per-project run history (transcripts)
 ```
 
-See `docs/DATA_MODEL.md` for the full data model and `docs/API.md` for the HTTP API.
+The skill catalog is bundled at `server/catalog.json` — edit it to add, remove,
+or re-group skills; the server reloads it on restart.
 
-## Boundaries (deliberate non-goals for this MVP)
+See `docs/DATA_MODEL.md` for the data model and `docs/API.md` for the HTTP API.
 
-No CAD/PCB/hardware benches, no shopping, no VR/AR, no code-generation benches,
-no branch merging, no accounts, no cloud. Processes can only call configured
-model APIs and only write inside their own Idea Space.
+## Boundaries
+
+gstack UI only launches the configured Claude Code binary against folders you
+register. It doesn't manage the gstack install itself, doesn't merge or deploy on
+its own, and has no accounts or cloud — it's a local companion to your CLI.

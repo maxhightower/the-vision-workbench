@@ -1,39 +1,36 @@
-# Workbench HTTP API
+# gstack UI HTTP API
 
 All endpoints are JSON under `/api/`. The UI is a static SPA served from `/`.
 
-## Orchard
+## Catalog
 | Method | Path | Body | Returns |
 | --- | --- | --- | --- |
-| GET | `/api/orchard` | — | Idea Space summaries (title, preview, counts, running processes) |
-| POST | `/api/orchard` | `{ seedText, title? }` | new space settings (plants a Seed) |
+| GET | `/api/catalog` | — | gstack phases in pipeline order, each with its `skills[]` |
 
-## Idea Space
-| GET | `/api/spaces/:id` | — | settings + seed + understanding + branches + counts (touches `lastOpenedAt`) |
-| PUT | `/api/spaces/:id/understanding` | `{ content }` | saves Current Understanding on the current branch |
+## Projects
+| Method | Path | Body | Returns |
+| --- | --- | --- | --- |
+| GET | `/api/projects` | — | registered projects, most-recently-used first |
+| POST | `/api/projects` | `{ path, name? }` | adds a project (400 if the path doesn't exist, 409 if already registered) |
+| GET | `/api/projects/:id` | — | project + `runningCount` + `runsCount` (touches `lastUsedAt`) |
+| DELETE | `/api/projects/:id` | — | removes the project and its run history (your folder is untouched) |
 
-## Branches
-| GET | `/api/spaces/:id/branches` | — | `{ currentBranch, branches[] }` |
-| POST | `/api/spaces/:id/branches` | `{ name, note?, startingUnderstanding?, checkout? }` | creates (and by default switches to) a branch |
-| POST | `/api/spaces/:id/branches/switch` | `{ name }` | switches the current branch |
-| POST | `/api/spaces/:id/branches/rename` | `{ oldName, newName }` | renames a branch |
-| GET | `/api/spaces/:id/branches/compare` | — | every branch with its full understanding |
+## Runs
+| Method | Path | Body | Returns |
+| --- | --- | --- | --- |
+| GET | `/api/projects/:id/runs` | — | run records for the project, newest first |
+| POST | `/api/projects/:id/runs` | `{ skillId, args? }` | launches the skill via the Claude Code CLI; returns the run record |
+| GET | `/api/runs/:rid` | — | one run record |
+| GET | `/api/runs/:rid/stream` | — | **SSE**: `snapshot` (record so far) → `chunk` (text) → `end` (status) |
+| POST | `/api/runs/:rid/stop` | — | sends SIGTERM to the running CLI process |
 
-## Outputs
-| GET | `/api/spaces/:id/outputs` | — | output summaries |
-| POST | `/api/spaces/:id/outputs` | `{ title, type?, workstream?, content }` | saves a new output |
-| GET/PUT/DELETE | `/api/spaces/:id/outputs/:oid` | `{ title?, content? }` on PUT | read / edit / delete |
+## Settings
+| Method | Path | Body | Returns |
+| --- | --- | --- | --- |
+| GET | `/api/settings` | — | settings + `permissionModes[]` |
+| PUT | `/api/settings` | partial settings | merges and saves |
 
-## Workstreams & Processes
-| GET | `/api/spaces/:id/workstreams` | — | workstream defs with `available` / `missingTools` |
-| GET | `/api/spaces/:id/processes` | — | process records, newest first |
-| POST | `/api/spaces/:id/processes` | `{ workstreamId, input? }` | starts a process (409 if required tools missing, 400 if a required input is missing) |
-| GET | `/api/processes/:pid` | — | one process record |
-| GET | `/api/processes/:pid/stream` | — | **SSE**: `snapshot` (full record so far) → `chunk` (text) → `end` (status) |
-| POST | `/api/processes/:pid/stop` | — | aborts a running process |
-| POST | `/api/processes/:pid/visibility` | `{ visibility }` | `foreground` \| `background` (UI-only flag) |
-| POST | `/api/processes/:pid/save-output` | `{ title? }` | saves the result as an Output |
+`settings` = `{ claudeBin, model, permissionMode, commandPrefix, extraArgs }`.
 
-## Tool Shed
-| GET | `/api/toolshed` | — | config with API keys masked |
-| PUT | `/api/toolshed` | partial config | merges and saves; masked `••••` keys keep the stored secret |
+## Health
+| GET | `/api/health` | — | `{ ok, home }` |

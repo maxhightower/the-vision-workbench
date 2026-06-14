@@ -1,4 +1,4 @@
-/** Tiny markdown renderer — enough for workstream results, no dependencies. */
+/** Tiny markdown renderer — enough for skill run output, no dependencies. */
 
 export function escapeHtml(text) {
   return String(text)

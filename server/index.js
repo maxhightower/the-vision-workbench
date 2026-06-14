@@ -2,12 +2,12 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PORT, WORKBENCH_HOME, ensureHome } from './config.js';
+import { PORT, GSTACK_UI_HOME, ensureHome } from './config.js';
 import { HttpError, readJsonBody, sendJson } from './util.js';
 import * as store from './store.js';
-import * as proc from './processes.js';
-import { listWorkstreams, getWorkstream } from './workstreams.js';
-import { readToolShed, writeToolShed, maskToolShed } from './toolshed.js';
+import * as runner from './runner.js';
+import { getCatalog } from './catalog.js';
+import { readSettings, writeSettings, PERMISSION_MODES } from './settings.js';
 
 const PUBLIC_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public');
 
@@ -22,156 +22,61 @@ const MIME = {
 
 // route table: [method, regex, handler(req, res, params)]
 const routes = [
-  // ---- orchard
-  ['GET', /^\/api\/orchard$/, () => store.listSpaces()],
-  ['POST', /^\/api\/orchard$/, async (req) => store.plantSeed(await readJsonBody(req))],
+  // ---- catalog (bundled gstack skills)
+  ['GET', /^\/api\/catalog$/, () => getCatalog()],
 
-  // ---- idea space
+  // ---- projects
+  ['GET', /^\/api\/projects$/, () => store.listProjects()],
+  ['POST', /^\/api\/projects$/, async (req) => store.addProject(await readJsonBody(req))],
   [
     'GET',
-    /^\/api\/spaces\/([a-z0-9-]+)$/,
+    /^\/api\/projects\/([a-z0-9-]+)$/,
     (req, res, [id]) => {
-      const settings = store.touchSpace(id);
+      const project = store.touchProject(id);
+      const runs = runner.listProjectRuns(id);
       return {
-        ...settings,
-        seed: store.readSeed(id),
-        understanding: store.readUnderstanding(id),
-        branches: store.listBranches(id),
-        outputsCount: store.listOutputs(id).length,
-        runningProcesses: proc.listSpaceProcesses(id).filter((p) => p.status === 'running').length,
+        ...project,
+        runningCount: runs.filter((r) => r.status === 'running').length,
+        runsCount: runs.length,
       };
     },
   ],
   [
-    'PUT',
-    /^\/api\/spaces\/([a-z0-9-]+)\/understanding$/,
-    async (req, res, [id]) => {
-      const { content } = await readJsonBody(req);
-      if (typeof content !== 'string') throw new HttpError(400, 'content (string) is required');
-      store.writeUnderstanding(id, content);
-      return { ok: true };
-    },
-  ],
-
-  [
-    'PUT',
-    /^\/api\/spaces\/([a-z0-9-]+)\/tags$/,
-    async (req, res, [id]) => {
-      const { tags } = await readJsonBody(req);
-      return { tags: store.setTags(id, tags).tags };
-    },
-  ],
-
-  // ---- branches
-  ['GET', /^\/api\/spaces\/([a-z0-9-]+)\/branches$/, (req, res, [id]) => ({
-    currentBranch: store.readSettings(id).currentBranch,
-    branches: store.listBranches(id),
-  })],
-  [
-    'POST',
-    /^\/api\/spaces\/([a-z0-9-]+)\/branches$/,
-    async (req, res, [id]) => store.createBranch(id, await readJsonBody(req)),
-  ],
-  [
-    'POST',
-    /^\/api\/spaces\/([a-z0-9-]+)\/branches\/switch$/,
-    async (req, res, [id]) => {
-      const { name } = await readJsonBody(req);
-      return store.switchBranch(id, name);
-    },
-  ],
-  [
-    'POST',
-    /^\/api\/spaces\/([a-z0-9-]+)\/branches\/rename$/,
-    async (req, res, [id]) => {
-      const { oldName, newName } = await readJsonBody(req);
-      store.renameBranch(id, oldName, newName);
-      return { ok: true };
-    },
-  ],
-  ['GET', /^\/api\/spaces\/([a-z0-9-]+)\/branches\/compare$/, (req, res, [id]) =>
-    store.compareBranches(id),
-  ],
-
-  // ---- outputs
-  ['GET', /^\/api\/spaces\/([a-z0-9-]+)\/outputs$/, (req, res, [id]) => store.listOutputs(id)],
-  [
-    'POST',
-    /^\/api\/spaces\/([a-z0-9-]+)\/outputs$/,
-    async (req, res, [id]) => store.saveOutput(id, await readJsonBody(req)),
-  ],
-  ['GET', /^\/api\/spaces\/([a-z0-9-]+)\/outputs\/([a-z0-9-]+)$/, (req, res, [id, oid]) =>
-    store.readOutput(id, oid),
-  ],
-  [
-    'PUT',
-    /^\/api\/spaces\/([a-z0-9-]+)\/outputs\/([a-z0-9-]+)$/,
-    async (req, res, [id, oid]) => store.updateOutput(id, oid, await readJsonBody(req)),
-  ],
-  [
     'DELETE',
-    /^\/api\/spaces\/([a-z0-9-]+)\/outputs\/([a-z0-9-]+)$/,
-    (req, res, [id, oid]) => {
-      store.deleteOutput(id, oid);
+    /^\/api\/projects\/([a-z0-9-]+)$/,
+    (req, res, [id]) => {
+      store.removeProject(id);
       return { ok: true };
     },
   ],
 
-  // ---- workstreams
-  ['GET', /^\/api\/spaces\/([a-z0-9-]+)\/workstreams$/, (req, res, [id]) =>
-    listWorkstreams(id, readToolShed()).map(({ prompt, offlineTemplate, ...pub }) => pub),
-  ],
-
-  // ---- processes
-  ['GET', /^\/api\/spaces\/([a-z0-9-]+)\/processes$/, (req, res, [id]) =>
-    proc.listSpaceProcesses(id),
-  ],
+  // ---- runs
+  ['GET', /^\/api\/projects\/([a-z0-9-]+)\/runs$/, (req, res, [id]) => runner.listProjectRuns(id)],
   [
     'POST',
-    /^\/api\/spaces\/([a-z0-9-]+)\/processes$/,
+    /^\/api\/projects\/([a-z0-9-]+)\/runs$/,
     async (req, res, [id]) => {
-      const { workstreamId, input } = await readJsonBody(req);
-      const toolShed = readToolShed();
-      const workstream = getWorkstream(id, workstreamId, toolShed);
-      if (!workstream) throw new HttpError(404, `Unknown workstream: ${workstreamId}`);
-      if (!workstream.available) {
-        throw new HttpError(
-          409,
-          `Workstream "${workstream.name}" needs tools not configured in the Tool Shed: ${workstream.missingTools.join(', ')}`
-        );
-      }
-      return proc.startProcess(id, workstream, toolShed, input);
+      const { skillId, args } = await readJsonBody(req);
+      if (!skillId) throw new HttpError(400, 'skillId is required');
+      return runner.startRun(id, skillId, args);
     },
   ],
-  ['GET', /^\/api\/processes\/([a-z0-9-]+)$/, (req, res, [pid]) => proc.getProcess(pid)],
+  ['GET', /^\/api\/runs\/([a-z0-9-]+)$/, (req, res, [rid]) => runner.getRun(rid)],
   [
     'GET',
-    /^\/api\/processes\/([a-z0-9-]+)\/stream$/,
-    (req, res, [pid]) => {
-      proc.subscribe(pid, res);
+    /^\/api\/runs\/([a-z0-9-]+)\/stream$/,
+    (req, res, [rid]) => {
+      runner.subscribe(rid, res);
       return undefined; // response handled by SSE
     },
   ],
-  ['POST', /^\/api\/processes\/([a-z0-9-]+)\/stop$/, (req, res, [pid]) => proc.stopProcess(pid)],
-  [
-    'POST',
-    /^\/api\/processes\/([a-z0-9-]+)\/visibility$/,
-    async (req, res, [pid]) => {
-      const { visibility } = await readJsonBody(req);
-      return proc.setVisibility(pid, visibility);
-    },
-  ],
-  [
-    'POST',
-    /^\/api\/processes\/([a-z0-9-]+)\/save-output$/,
-    async (req, res, [pid]) => proc.saveProcessAsOutput(pid, await readJsonBody(req)),
-  ],
+  ['POST', /^\/api\/runs\/([a-z0-9-]+)\/stop$/, (req, res, [rid]) => runner.stopRun(rid)],
 
-  // ---- tool shed
-  ['GET', /^\/api\/toolshed$/, () => maskToolShed(readToolShed())],
-  ['PUT', /^\/api\/toolshed$/, async (req) => maskToolShed(writeToolShed(await readJsonBody(req)))],
+  // ---- settings
+  ['GET', /^\/api\/settings$/, () => ({ ...readSettings(), permissionModes: PERMISSION_MODES })],
+  ['PUT', /^\/api\/settings$/, async (req) => writeSettings(await readJsonBody(req))],
 
-  ['GET', /^\/api\/health$/, () => ({ ok: true, home: WORKBENCH_HOME })],
+  ['GET', /^\/api\/health$/, () => ({ ok: true, home: GSTACK_UI_HOME })],
 ];
 
 async function handleApi(req, res, pathname) {
@@ -220,8 +125,8 @@ const server = http.createServer(async (req, res) => {
 });
 
 ensureHome();
-proc.reconcileOnBoot();
+runner.reconcileOnBoot();
 server.listen(PORT, () => {
-  console.log(`\n  Workbench is running:  http://localhost:${PORT}`);
-  console.log(`  Your orchard lives in: ${WORKBENCH_HOME}\n`);
+  console.log(`\n  gstack UI is running:  http://localhost:${PORT}`);
+  console.log(`  State lives in:        ${GSTACK_UI_HOME}\n`);
 });

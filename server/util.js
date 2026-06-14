@@ -62,27 +62,3 @@ export function sendJson(res, status, data) {
   });
   res.end(body);
 }
-
-/** Serialize an object plus markdown body into a file with YAML-ish frontmatter. */
-export function withFrontmatter(meta, content) {
-  const lines = ['---'];
-  for (const [key, value] of Object.entries(meta)) {
-    if (value === undefined || value === null) continue;
-    lines.push(`${key}: ${String(value).replace(/\n/g, ' ')}`);
-  }
-  lines.push('---', '');
-  return lines.join('\n') + content;
-}
-
-/** Parse a frontmatter file back into { meta, content }. */
-export function parseFrontmatter(raw) {
-  const match = /^---\n([\s\S]*?)\n---\n?/.exec(raw);
-  if (!match) return { meta: {}, content: raw };
-  const meta = {};
-  for (const line of match[1].split('\n')) {
-    const idx = line.indexOf(':');
-    if (idx === -1) continue;
-    meta[line.slice(0, idx).trim()] = line.slice(idx + 1).trim();
-  }
-  return { meta, content: raw.slice(match[0].length).replace(/^\n/, '') };
-}

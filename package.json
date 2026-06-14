@@ -1,7 +1,7 @@
 {
-  "name": "workbench",
+  "name": "gstack-ui",
   "version": "0.1.0",
-  "description": "Workbench — a local-first Idea Developer. Plant a Seed, grow an Idea Space.",
+  "description": "gstack UI — a local web UI for Garry Tan's gstack. Run gstack skills against your projects from the browser.",
   "type": "module",
   "main": "server/index.js",
   "scripts": {

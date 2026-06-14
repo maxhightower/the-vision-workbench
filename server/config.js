@@ -3,22 +3,24 @@ import path from 'node:path';
 import fs from 'node:fs';
 
 /**
- * Workbench keeps all user data in a single, inspectable home folder:
+ * gstack UI keeps its own state in a single, inspectable home folder — it never
+ * writes into the projects it drives. Your code repos stay clean; only the UI's
+ * project registry, settings and run history live here:
  *
- *   <WORKBENCH_HOME>/
- *     tool_shed.json          global provider/tool configuration
- *     orchard/
- *       <idea-space-slug>/    one git repo per Idea Space
+ *   <GSTACK_UI_HOME>/
+ *     settings.json        claude binary, model, permission mode, prefix
+ *     projects.json        registered project directories
+ *     runs/<projectId>.json  per-project run history (transcripts)
  *
- * Default home is ~/Workbench; override with the WORKBENCH_HOME env var.
+ * Default home is ~/.gstack-ui; override with the GSTACK_UI_HOME env var.
  */
-export const WORKBENCH_HOME =
-  process.env.WORKBENCH_HOME || path.join(os.homedir(), 'Workbench');
+export const GSTACK_UI_HOME =
+  process.env.GSTACK_UI_HOME || path.join(os.homedir(), '.gstack-ui');
 
-export const ORCHARD_DIR = path.join(WORKBENCH_HOME, 'orchard');
+export const RUNS_DIR = path.join(GSTACK_UI_HOME, 'runs');
 
 export const PORT = Number(process.env.PORT || 4810);
 
 export function ensureHome() {
-  fs.mkdirSync(ORCHARD_DIR, { recursive: true });
+  fs.mkdirSync(RUNS_DIR, { recursive: true });
 }

@@ -10,50 +10,29 @@ async function request(method, url, body) {
 }
 
 export const api = {
-  orchard: () => request('GET', '/api/orchard'),
-  plantSeed: (seedText, title, tags) => request('POST', '/api/orchard', { seedText, title, tags }),
-  setTags: (id, tags) => request('PUT', `/api/spaces/${id}/tags`, { tags }),
+  catalog: () => request('GET', '/api/catalog'),
 
-  space: (id) => request('GET', `/api/spaces/${id}`),
-  saveUnderstanding: (id, content) =>
-    request('PUT', `/api/spaces/${id}/understanding`, { content }),
+  projects: () => request('GET', '/api/projects'),
+  addProject: (name, path) => request('POST', '/api/projects', { name, path }),
+  project: (id) => request('GET', `/api/projects/${id}`),
+  removeProject: (id) => request('DELETE', `/api/projects/${id}`),
 
-  branches: (id) => request('GET', `/api/spaces/${id}/branches`),
-  createBranch: (id, body) => request('POST', `/api/spaces/${id}/branches`, body),
-  switchBranch: (id, name) => request('POST', `/api/spaces/${id}/branches/switch`, { name }),
-  renameBranch: (id, oldName, newName) =>
-    request('POST', `/api/spaces/${id}/branches/rename`, { oldName, newName }),
-  compareBranches: (id) => request('GET', `/api/spaces/${id}/branches/compare`),
+  runs: (id) => request('GET', `/api/projects/${id}/runs`),
+  startRun: (id, skillId, args) => request('POST', `/api/projects/${id}/runs`, { skillId, args }),
+  run: (rid) => request('GET', `/api/runs/${rid}`),
+  stopRun: (rid) => request('POST', `/api/runs/${rid}/stop`, {}),
 
-  outputs: (id) => request('GET', `/api/spaces/${id}/outputs`),
-  output: (id, oid) => request('GET', `/api/spaces/${id}/outputs/${oid}`),
-  saveOutput: (id, body) => request('POST', `/api/spaces/${id}/outputs`, body),
-  updateOutput: (id, oid, body) => request('PUT', `/api/spaces/${id}/outputs/${oid}`, body),
-  deleteOutput: (id, oid) => request('DELETE', `/api/spaces/${id}/outputs/${oid}`),
-
-  workstreams: (id) => request('GET', `/api/spaces/${id}/workstreams`),
-
-  processes: (id) => request('GET', `/api/spaces/${id}/processes`),
-  startProcess: (id, workstreamId, input) =>
-    request('POST', `/api/spaces/${id}/processes`, { workstreamId, input }),
-  process: (pid) => request('GET', `/api/processes/${pid}`),
-  stopProcess: (pid) => request('POST', `/api/processes/${pid}/stop`, {}),
-  setProcessVisibility: (pid, visibility) =>
-    request('POST', `/api/processes/${pid}/visibility`, { visibility }),
-  saveProcessOutput: (pid, title) =>
-    request('POST', `/api/processes/${pid}/save-output`, { title }),
-
-  toolShed: () => request('GET', '/api/toolshed'),
-  saveToolShed: (config) => request('PUT', '/api/toolshed', config),
+  settings: () => request('GET', '/api/settings'),
+  saveSettings: (config) => request('PUT', '/api/settings', config),
 };
 
 /**
- * Follow a process's output stream.
+ * Follow a run's output stream.
  * handlers: { onSnapshot(record), onChunk(text), onEnd(status, error) }
  * Returns a close() function.
  */
-export function streamProcess(processId, handlers) {
-  const source = new EventSource(`/api/processes/${processId}/stream`);
+export function streamRun(runId, handlers) {
+  const source = new EventSource(`/api/runs/${runId}/stream`);
   source.onmessage = (event) => {
     const msg = JSON.parse(event.data);
     if (msg.type === 'snapshot') handlers.onSnapshot?.(msg.record);
@@ -64,7 +43,7 @@ export function streamProcess(processId, handlers) {
     }
   };
   source.onerror = () => {
-    // EventSource auto-reconnects; if the process ended the server closes us.
+    // EventSource auto-reconnects; if the run ended the server closes us.
   };
   return () => source.close();
 }

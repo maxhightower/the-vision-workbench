@@ -1,0 +1,86 @@
+{
+  "$comment": "Bundled catalog of gstack skills (github.com/garrytan/gstack), grouped by the sprint pipeline Think → Plan → Design → Review → Test → Ship → Document → Reflect. Each skill `id` is the slash-command name WITHOUT the leading slash or any install prefix; the UI builds the actual command as /<prefix><id>. Curated from the gstack docs — edit freely; the UI reloads it on restart.",
+  "pipeline": ["think", "plan", "design", "review", "test", "ship", "document", "reflect", "utilities"],
+  "phases": {
+    "think": {
+      "label": "Think",
+      "blurb": "Turn fuzzy intent into a sharp, executable spec."
+    },
+    "plan": {
+      "label": "Plan",
+      "blurb": "Pressure-test scope and architecture before a line is built."
+    },
+    "design": {
+      "label": "Design",
+      "blurb": "Build the look and feel, then turn mockups into code."
+    },
+    "review": {
+      "label": "Review",
+      "blurb": "Staff-level code review, debugging and independent audits."
+    },
+    "test": {
+      "label": "Test",
+      "blurb": "Verify it actually works — functionally, securely, fast."
+    },
+    "ship": {
+      "label": "Ship",
+      "blurb": "Get it to production safely and watch the landing."
+    },
+    "document": {
+      "label": "Document",
+      "blurb": "Keep the docs honest and complete."
+    },
+    "reflect": {
+      "label": "Reflect",
+      "blurb": "Learn from the sprint and bank the patterns."
+    },
+    "utilities": {
+      "label": "Utilities & Safety",
+      "blurb": "Browser control, edit guards and gstack maintenance."
+    }
+  },
+  "skills": [
+    { "id": "office-hours", "name": "Office Hours", "phase": "think", "interactive": true, "hint": "what you're trying to build", "desc": "Product interrogation with forcing questions; writes a design doc the plan reviews pick up." },
+    { "id": "spec", "name": "Spec", "phase": "think", "hint": "the vague intent to sharpen", "desc": "Turn a vague intent into an executable specification." },
+    { "id": "autoplan", "name": "Autoplan", "phase": "think", "hint": "the feature or change to plan", "desc": "Fully reviewed plan in one shot: CEO → design → eng." },
+
+    { "id": "plan-ceo-review", "name": "CEO Review", "phase": "plan", "hint": "optional mode or focus", "desc": "Strategic scope challenge with four modes — is this worth building?" },
+    { "id": "plan-eng-review", "name": "Eng Review", "phase": "plan", "desc": "Architecture lock-in with diagrams; writes a test plan QA picks up." },
+    { "id": "plan-design-review", "name": "Design Review (plan)", "phase": "plan", "desc": "Audit the plan across every design dimension." },
+    { "id": "plan-devex-review", "name": "DevEx Review (plan)", "phase": "plan", "interactive": true, "desc": "Interactive review of developer experience in the plan." },
+
+    { "id": "design-consultation", "name": "Design Consultation", "phase": "design", "interactive": true, "desc": "Build a design system from scratch." },
+    { "id": "design-shotgun", "name": "Design Shotgun", "phase": "design", "hint": "the screen or component", "desc": "Generate 4–6 visual mockup variants to choose from." },
+    { "id": "design-html", "name": "Design → HTML", "phase": "design", "desc": "Convert chosen mockups into production code." },
+
+    { "id": "review", "name": "Review", "phase": "review", "desc": "Staff-engineer code review; auto-fixes obvious issues." },
+    { "id": "investigate", "name": "Investigate", "phase": "review", "hint": "the bug or symptom", "desc": "Systematic root-cause debugging." },
+    { "id": "design-review", "name": "Design Review", "phase": "review", "desc": "Designer-coded audit of the running UI, with atomic commits." },
+    { "id": "devex-review", "name": "DevEx Review", "phase": "review", "interactive": true, "desc": "Live developer-onboarding audit." },
+    { "id": "codex", "name": "Codex", "phase": "review", "hint": "optional mode", "desc": "Independent OpenAI review (three modes)." },
+
+    { "id": "qa", "name": "QA", "phase": "test", "desc": "Browser-based testing that also fixes the bugs it finds." },
+    { "id": "qa-only", "name": "QA (report only)", "phase": "test", "desc": "Browser testing that reports bugs without changing code." },
+    { "id": "cso", "name": "Security Audit", "phase": "test", "desc": "Security audit across OWASP + STRIDE." },
+    { "id": "benchmark", "name": "Benchmark", "phase": "test", "desc": "Performance baseline against Core Web Vitals." },
+
+    { "id": "ship", "name": "Ship", "phase": "ship", "desc": "Sync tests, audit coverage, and open a PR." },
+    { "id": "land-and-deploy", "name": "Land & Deploy", "phase": "ship", "desc": "Merge, deploy and verify in production." },
+    { "id": "canary", "name": "Canary", "phase": "ship", "desc": "Post-deploy error and performance monitoring." },
+
+    { "id": "document-release", "name": "Document Release", "phase": "document", "desc": "Auto-update all project docs for a release." },
+    { "id": "document-generate", "name": "Generate Docs", "phase": "document", "desc": "Create missing Diataxis documentation." },
+
+    { "id": "retro", "name": "Retro", "phase": "reflect", "desc": "Weekly engineering retrospective." },
+    { "id": "learn", "name": "Learn", "phase": "reflect", "hint": "optional pattern to record", "desc": "Manage persistent project patterns gstack remembers." },
+
+    { "id": "browse", "name": "Browse", "phase": "utilities", "interactive": true, "hint": "what to do in the browser", "desc": "Drive Chromium with real clicks." },
+    { "id": "careful", "name": "Careful", "phase": "utilities", "desc": "Warn before destructive commands." },
+    { "id": "freeze", "name": "Freeze", "phase": "utilities", "hint": "the directory to lock", "desc": "Lock edits to a single directory." },
+    { "id": "guard", "name": "Guard", "phase": "utilities", "desc": "Combined safety: careful + freeze." },
+    { "id": "unfreeze", "name": "Unfreeze", "phase": "utilities", "desc": "Remove an edit lock." },
+    { "id": "setup-gbrain", "name": "Setup gBrain", "phase": "utilities", "desc": "Stand up a persistent knowledge base." },
+    { "id": "sync-gbrain", "name": "Sync gBrain", "phase": "utilities", "desc": "Keep the codebase indexed in the brain." },
+    { "id": "gstack-upgrade", "name": "Upgrade gstack", "phase": "utilities", "desc": "Self-update gstack to the latest version." }
+  ]
+}

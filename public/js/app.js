@@ -1,18 +1,16 @@
-import { renderOrchard } from './views/orchard.js';
-import { renderSeed } from './views/seed.js';
-import { renderSpace } from './views/space.js';
-import { renderToolShed } from './views/toolshed.js';
+import { renderProjects } from './views/projects.js';
+import { renderProject } from './views/project.js';
+import { renderSettings } from './views/settings.js';
 
 const app = document.getElementById('app');
 
 const routes = [
-  { regex: /^#?\/?$/, nav: 'orchard', view: () => renderOrchard(app) },
-  { regex: /^#\/seed$/, nav: 'seed', view: () => renderSeed(app) },
-  { regex: /^#\/toolshed$/, nav: 'toolshed', view: () => renderToolShed(app) },
+  { regex: /^#?\/?$/, nav: 'projects', view: () => renderProjects(app) },
+  { regex: /^#\/settings$/, nav: 'settings', view: () => renderSettings(app) },
   {
-    regex: /^#\/space\/([a-z0-9-]+)(?:\/([a-z]+))?$/,
+    regex: /^#\/project\/([a-z0-9-]+)$/,
     nav: null,
-    view: (match) => renderSpace(app, match[1], match[2] || 'core'),
+    view: (match) => renderProject(app, match[1]),
   },
 ];
 
@@ -51,7 +49,7 @@ export function toast(message, isError = false) {
   el.classList.toggle('error', isError);
   el.classList.remove('hidden');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.add('hidden'), 3200);
+  toastTimer = setTimeout(() => el.classList.add('hidden'), 3600);
 }
 
 export function timeAgo(iso) {
@@ -61,4 +59,8 @@ export function timeAgo(iso) {
   if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
   if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
   return `${Math.floor(secs / 86400)}d ago`;
+}
+
+export function reload() {
+  window.dispatchEvent(new HashChangeEvent('hashchange'));
 }
