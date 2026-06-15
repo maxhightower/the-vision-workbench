@@ -173,5 +173,43 @@ check('market scan unlocks with search tool', ws2.find((w) => w.id === 'market-s
 const summary = (await req('GET', '/api/orchard')).find((s) => s.id === seed.id);
 check('orchard metadata complete', summary.branchesCount === 2 && summary.outputsCount === 1);
 
+// 11. Posture mode (Solution vs Learning)
+check('new space defaults to solution mode', space.mode === 'solution');
+await req('PUT', `/api/spaces/${seed.id}/mode`, { mode: 'learning' });
+const learning = await req('GET', `/api/spaces/${seed.id}`);
+check('mode is settable to learning', learning.mode === 'learning');
+const badMode = await fetch(`${BASE}/api/spaces/${seed.id}/mode`, {
+  method: 'PUT',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ mode: 'nonsense' }),
+});
+check('invalid mode is rejected', badMode.status === 400);
+
+// 12. Concept web: keep a node (offline → no embedding, derived label), edit, list, delete
+const node = await req('POST', `/api/spaces/${seed.id}/web/nodes`, {
+  text: 'Plant-mood notification personality as the core differentiator.',
+  provenance: { sourceDoc: 'understanding', lines: '1' },
+});
+check('keep creates a web node with a label', Boolean(node.id && node.label));
+check('keep attaches provenance', node.provenance?.sourceDoc === 'understanding');
+check('node defaults to unknown familiarity', node.familiarity === 'unknown' && node.source === 'inferred');
+
+let webGraph = await req('GET', `/api/spaces/${seed.id}/web`);
+check('web lists the kept node', webGraph.nodes.some((n) => n.id === node.id));
+
+const reTag = await req('PUT', `/api/spaces/${seed.id}/web/nodes/${node.id}`, { familiarity: 'known' });
+check('node familiarity is user-correctable', reTag.familiarity === 'known' && reTag.source === 'user');
+
+await req('DELETE', `/api/spaces/${seed.id}/web/nodes/${node.id}`);
+webGraph = await req('GET', `/api/spaces/${seed.id}/web`);
+check('node can be deleted', !webGraph.nodes.some((n) => n.id === node.id));
+
+const emptyKeep = await fetch(`${BASE}/api/spaces/${seed.id}/web/nodes`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ text: '   ' }),
+});
+check('empty keep is rejected', emptyKeep.status === 400);
+
 console.log(failures ? `\n${failures} FAILURE(S)` : '\nAll checks passed.');
 process.exit(failures ? 1 : 0);
