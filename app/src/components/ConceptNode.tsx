@@ -5,13 +5,14 @@ import type { Familiarity } from '../types';
 interface ConceptNodeData {
   label: string;
   familiarity: Familiarity;
+  size: 'sm' | 'md' | 'lg';
 }
 
 export function ConceptNode({ data, selected }: NodeProps) {
   const d = data as unknown as ConceptNodeData;
   return (
     <div
-      className={`concept-node ${selected ? 'selected' : ''}`}
+      className={`concept-node size-${d.size} ${selected ? 'selected' : ''}`}
       style={{ ['--n-color' as string]: FAM_COLOR[d.familiarity] } as React.CSSProperties}
     >
       <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />

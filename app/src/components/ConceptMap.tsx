@@ -16,6 +16,13 @@ import { ConceptNode } from './ConceptNode';
 
 const nodeTypes = { concept: ConceptNode };
 
+function sizeOf(text: string): 'sm' | 'md' | 'lg' {
+  const len = text.trim().length;
+  if (len <= 40) return 'sm';
+  if (len <= 160) return 'md';
+  return 'lg';
+}
+
 interface Props {
   spaceId: string;
   nodes: WebNode[];
@@ -36,7 +43,8 @@ function Flow({ spaceId, nodes, selectedId, justAdded, onSelect, onUpdate, onKee
         id: n.id,
         type: 'concept',
         position: n.position,
-        data: { label: n.label, familiarity: n.familiarity },
+        // size encodes how much was kept: a one-liner stays small, a passage grows
+        data: { label: n.label, familiarity: n.familiarity, size: sizeOf(n.text) },
         selected: n.id === selectedId,
         className: justAdded === n.id ? 'just-added' : undefined,
       })),

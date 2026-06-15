@@ -114,6 +114,7 @@ export function Workspace({ spaceId }: { spaceId: string }) {
 
       <div className="workspace" ref={containerRef}>
         <div className="region-map" style={{ flex: `${mapFraction} 1 0` }}>
+          <div className="region-title map-title">✦ Web</div>
           <ConceptMap
             spaceId={spaceId}
             nodes={nodes}

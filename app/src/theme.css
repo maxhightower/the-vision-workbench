@@ -4,8 +4,8 @@
   --fam-unfamiliar: #6f8bd6;
   --fam-unknown: #6b7280;
   --radius: 10px;
-  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --sans: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: 'IBM Plex Sans', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   font-family: var(--sans);
 }
 
@@ -129,16 +129,47 @@ input:focus {
 }
 .topbar .title {
   font-weight: 600;
+  font-family: var(--mono);
+  font-size: 14px;
 }
 .topbar .spacer {
   flex: 1;
 }
 .badge {
+  font-family: var(--mono);
   font-size: 11px;
   color: var(--text-dim);
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 2px 9px;
+}
+
+/* region labels so the two zones (web / forge) are unmistakable */
+.region-title {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.map-title {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  z-index: 5;
+  pointer-events: none;
+  background: var(--bg);
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+.forge-title {
+  padding: 2px 0 2px;
+  border-bottom: 1px solid var(--border);
+  margin: -2px 0 4px;
 }
 
 .segmented {
@@ -214,10 +245,11 @@ input:focus {
   gap: 10px;
 }
 .forge-section-label {
-  font-size: 12px;
+  font-family: var(--mono);
+  font-size: 11px;
   color: var(--text-faint);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
 }
 .forge textarea {
   min-height: 90px;
@@ -301,17 +333,32 @@ input:focus {
   display: none;
 }
 .concept-node {
+  font-family: var(--mono);
   border-radius: 12px;
   border: 1.5px solid var(--n-color);
   background: var(--bg-raised);
   color: var(--text);
-  padding: 8px 12px;
-  max-width: 190px;
-  font-size: 13px;
   line-height: 1.3;
   box-shadow: var(--shadow);
   cursor: pointer;
   position: relative;
+}
+/* node size encodes how much you kept: a one-liner stays small, a passage grows */
+.concept-node.size-sm {
+  padding: 5px 10px;
+  max-width: 150px;
+  font-size: 11.5px;
+}
+.concept-node.size-md {
+  padding: 8px 13px;
+  max-width: 210px;
+  font-size: 13.5px;
+}
+.concept-node.size-lg {
+  padding: 12px 16px;
+  max-width: 280px;
+  font-size: 15.5px;
+  font-weight: 500;
 }
 .concept-node .dot {
   display: inline-block;
@@ -321,6 +368,10 @@ input:focus {
   background: var(--n-color);
   margin-right: 7px;
   vertical-align: middle;
+}
+.concept-node.size-lg .dot {
+  width: 10px;
+  height: 10px;
 }
 .concept-node.selected {
   outline: 2px solid var(--accent);

@@ -80,6 +80,8 @@ export function Forge({ space, onSpaceChange, onKeep }: Props) {
         setMenu({ x: e.clientX, y: e.clientY, text });
       }}
     >
+      <div className="region-title forge-title">⚒ Forge</div>
+
       <div className="forge-head">
         <span className="forge-section-label">Current Understanding</span>
         <div style={{ flex: 1 }} />
