@@ -332,50 +332,54 @@ input:focus {
 .react-flow__attribution {
   display: none;
 }
+/* a node is a compact colored marker; its label breaks out above the border */
 .concept-node {
-  font-family: var(--mono);
-  border-radius: 12px;
+  position: relative;
+  overflow: visible;
   border: 1.5px solid var(--n-color);
-  background: var(--bg-raised);
-  color: var(--text);
-  line-height: 1.3;
+  background: color-mix(in srgb, var(--n-color) 18%, var(--bg-raised));
   box-shadow: var(--shadow);
   cursor: pointer;
-  position: relative;
 }
-/* node size encodes how much you kept: a one-liner stays small, a passage grows */
+/* size encodes how much you kept: a one-liner stays small, a passage grows */
 .concept-node.size-sm {
-  padding: 5px 10px;
-  max-width: 150px;
-  font-size: 11.5px;
+  width: 22px;
+  height: 22px;
+  border-radius: 8px;
 }
 .concept-node.size-md {
-  padding: 8px 13px;
-  max-width: 210px;
-  font-size: 13.5px;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
 }
 .concept-node.size-lg {
-  padding: 12px 16px;
-  max-width: 280px;
-  font-size: 15.5px;
-  font-weight: 500;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
 }
-.concept-node .dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--n-color);
-  margin-right: 7px;
-  vertical-align: middle;
+.node-label {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 6px;
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.2;
+  color: var(--text);
+  pointer-events: none;
+  text-shadow: 0 1px 3px var(--bg), 0 0 2px var(--bg);
 }
-.concept-node.size-lg .dot {
-  width: 10px;
-  height: 10px;
+.concept-node.size-lg .node-label {
+  font-size: 13.5px;
 }
 .concept-node.selected {
   outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline-offset: 3px;
 }
 .map-empty {
   position: absolute;

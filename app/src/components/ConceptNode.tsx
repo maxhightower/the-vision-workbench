@@ -15,9 +15,8 @@ export function ConceptNode({ data, selected }: NodeProps) {
       className={`concept-node size-${d.size} ${selected ? 'selected' : ''}`}
       style={{ ['--n-color' as string]: FAM_COLOR[d.familiarity] } as React.CSSProperties}
     >
+      <div className="node-label">{d.label}</div>
       <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
-      <span className="dot" />
-      {d.label}
       <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
     </div>
   );
