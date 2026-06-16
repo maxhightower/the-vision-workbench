@@ -43,6 +43,7 @@ function spaceCard(space) {
   return `
     <div class="card space-card" data-id="${space.id}">
       <h3>${escapeHtml(space.title)}</h3>
+      ${space.tags?.length ? `<div class="tag-row" style="margin-bottom:8px">${space.tags.map((t) => `<span class="tag-chip on">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
       <p class="preview">${escapeHtml(space.understandingPreview || 'No understanding yet.')}</p>
       <div class="meta">
         <span class="badge">⎇ ${space.branchesCount} ${space.branchesCount === 1 ? 'branch' : 'branches'}</span>

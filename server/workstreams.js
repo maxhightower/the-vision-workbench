@@ -22,7 +22,11 @@ const SYSTEM_PROMPT =
   'Do not add preamble or closing remarks.';
 
 function context(ctx) {
+  const tags = ctx.tags?.length
+    ? `## Intent tags\n\nThe user chose these tags to direct the vision and intent of this idea — let them steer your interpretation: ${ctx.tags.join(', ')}\n\n`
+    : '';
   return (
+    tags +
     `## The original Seed (raw idea as the user first wrote it)\n\n${ctx.seed.trim()}\n\n` +
     `## Current Understanding (the evolving interpretation, branch "${ctx.branch}")\n\n` +
     `${ctx.understanding.trim()}\n\n---\n\n`
@@ -47,6 +51,38 @@ export const BUILT_IN_WORKSTREAMS = [
       '## Current Understanding (revised)\n\n_Restate the idea more clearly here._\n\n' +
       '## Key Themes\n\n- \n- \n- \n\n' +
       '## Missing Details\n\n- \n- \n- \n',
+  },
+  {
+    id: 'refine-understanding',
+    name: 'Refine Understanding',
+    description: 'Tell Workbench what it got wrong or what to develop further; it rewrites the Current Understanding to honor your guidance.',
+    requiredTools: [],
+    inputs: [
+      {
+        key: 'guidance',
+        label: 'Your guidance',
+        type: 'textarea',
+        required: true,
+        placeholder: 'What did Workbench get wrong? What matters more than it realizes? What should be developed further?',
+      },
+    ],
+    outputType: 'current_understanding',
+    outputTitle: 'Refined Understanding',
+    prompt: (ctx) =>
+      context(ctx) +
+      `The user has reviewed the Current Understanding and responds with this guidance:\n\n` +
+      `"""\n${ctx.input.guidance.trim()}\n"""\n\n` +
+      'Rewrite the Current Understanding so it truly reflects what the user means. ' +
+      'Treat the guidance as authoritative: where it conflicts with the previous understanding, the guidance wins. ' +
+      'Keep everything from the previous understanding that the guidance does not touch. ' +
+      'Produce exactly these sections:\n\n' +
+      '## Current Understanding (revised)\nThe full corrected understanding — 2 to 4 paragraphs. It must stand alone; the user may replace their Current Understanding with it verbatim.\n\n' +
+      '## What Changed\n2–5 bullets: what you corrected, reweighted, or developed, and why.\n\n' +
+      '## Open Questions\n2–4 bullets: what the guidance implies but leaves unresolved.',
+    offlineTemplate:
+      '## Current Understanding (revised)\n\n_Rewrite the understanding here, honoring your own guidance._\n\n' +
+      '## What Changed\n\n- \n- \n\n' +
+      '## Open Questions\n\n- \n- \n',
   },
   {
     id: 'generate-branches',
@@ -144,13 +180,15 @@ function customToDef(raw) {
     name: raw.name,
     description: raw.description || '',
     requiredTools: raw.requiredTools || [],
+    inputs: raw.inputs || [],
     outputType: raw.outputType || 'note',
     outputTitle: raw.outputTitle || raw.name,
     custom: true,
     prompt: (ctx) =>
       raw.promptTemplate
         .replaceAll('{{seed}}', ctx.seed)
-        .replaceAll('{{understanding}}', ctx.understanding),
+        .replaceAll('{{understanding}}', ctx.understanding)
+        .replace(/\{\{input\.([a-zA-Z0-9_-]+)\}\}/g, (_, key) => ctx.input[key] || ''),
     offlineTemplate: raw.offlineTemplate || '_Fill in by hand (custom workstream)._\n',
   };
 }
@@ -163,7 +201,7 @@ export function listWorkstreams(spaceId, toolShed) {
       if (tool === 'search') return !isSearchConfigured(toolShed);
       return true;
     });
-    return { ...ws, available: missingTools.length === 0, missingTools };
+    return { ...ws, inputs: ws.inputs || [], available: missingTools.length === 0, missingTools };
   });
 }
 
