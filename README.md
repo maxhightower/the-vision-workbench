@@ -83,6 +83,8 @@ Everything is plain, portable, human-readable files:
 ```
 
 See `docs/DATA_MODEL.md` for the full data model and `docs/API.md` for the HTTP API.
+See `docs/VISION.md` for where the project is heading — the ideation forge, the
+concept web, learning vs solution postures, and the v1 build plan.
 
 ## Boundaries (deliberate non-goals for this MVP)
 

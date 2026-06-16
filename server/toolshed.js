@@ -17,6 +17,7 @@ const DEFAULTS = {
       baseUrl: 'https://api.openai.com/v1',
       apiKey: '',
       model: 'gpt-4o-mini',
+      embeddingModel: 'text-embedding-3-small',
     },
     anthropic: {
       label: 'Anthropic API',
@@ -27,6 +28,7 @@ const DEFAULTS = {
       label: 'Ollama (local)',
       baseUrl: 'http://localhost:11434',
       model: 'llama3.1',
+      embeddingModel: 'nomic-embed-text',
     },
     offline: {
       label: 'Offline (no provider)',
@@ -100,4 +102,9 @@ export function maskToolShed(config) {
 
 export function isSearchConfigured(config) {
   return Boolean(config.tools?.search?.enabled);
+}
+
+/** Whether the active provider can produce embeddings (for auto-mapping). */
+export function isEmbeddingConfigured(config) {
+  return ['ollama', 'openai-compatible'].includes(config.activeProvider);
 }

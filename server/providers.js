@@ -169,4 +169,70 @@ export function streamCompletion(toolShed, request, signal) {
   return adapter(toolShed.providers[providerId] || {}, request, signal);
 }
 
+/** Accumulate a streamed completion into a single string (non-streaming use). */
+export async function complete(toolShed, request, signal) {
+  let out = '';
+  for await (const chunk of streamCompletion(toolShed, request, signal)) out += chunk;
+  return out;
+}
+
+// ---------------------------------------------------------------- embeddings
+
+async function embedOllama(config, texts) {
+  const baseUrl = (config.baseUrl || 'http://localhost:11434').replace(/\/+$/, '');
+  const model = config.embeddingModel || 'nomic-embed-text';
+  const out = [];
+  for (const text of texts) {
+    const res = await fetch(`${baseUrl}/api/embeddings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, prompt: text }),
+    });
+    await assertOk(res, 'Ollama embeddings');
+    const json = await res.json();
+    out.push(Array.isArray(json.embedding) ? json.embedding : null);
+  }
+  return out;
+}
+
+async function embedOpenAiCompatible(config, texts) {
+  const baseUrl = (config.baseUrl || '').replace(/\/+$/, '');
+  if (!baseUrl) throw new ProviderError('OpenAI-compatible provider has no base URL configured.');
+  const model = config.embeddingModel || 'text-embedding-3-small';
+  const res = await fetch(`${baseUrl}/embeddings`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {}),
+    },
+    body: JSON.stringify({ model, input: texts }),
+  });
+  await assertOk(res, 'OpenAI-compatible embeddings');
+  const json = await res.json();
+  return (json.data || []).map((d) => (Array.isArray(d.embedding) ? d.embedding : null));
+}
+
+const EMBED_ADAPTERS = {
+  'openai-compatible': embedOpenAiCompatible,
+  ollama: embedOllama,
+};
+
+/**
+ * Embed an array of texts through the active provider. Embeddings are an
+ * optional enhancement: if the active provider cannot embed (anthropic/offline)
+ * or the call fails, this resolves to an array of nulls so the loop still works
+ * — nodes are simply placed manually instead of by meaning.
+ */
+export async function embedTexts(toolShed, texts) {
+  if (!texts?.length) return [];
+  const providerId = toolShed.activeProvider || 'offline';
+  const adapter = EMBED_ADAPTERS[providerId];
+  if (!adapter) return texts.map(() => null);
+  try {
+    return await adapter(toolShed.providers[providerId] || {}, texts);
+  } catch {
+    return texts.map(() => null);
+  }
+}
+
 export { ProviderError };

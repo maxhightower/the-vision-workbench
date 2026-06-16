@@ -63,6 +63,7 @@ export function startProcess(spaceId, workstream, toolShed, rawInput) {
     understanding: readUnderstanding(spaceId),
     branch: settings.currentBranch,
     tags: settings.tags || [],
+    mode: settings.mode || 'solution',
     input: validateInput(workstream, rawInput),
   };
 

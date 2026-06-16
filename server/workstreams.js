@@ -21,11 +21,24 @@ const SYSTEM_PROMPT =
   'Respond in clean Markdown with the exact section structure requested. ' +
   'Do not add preamble or closing remarks.';
 
+function modeGuidance(mode) {
+  if (mode !== 'learning') return '';
+  return (
+    '## Posture: Learning (accessibility, not solving)\n\n' +
+    'Operate as an accessibility tool, not a problem-solver. Do NOT deliver a finished solution. ' +
+    'Instead: surface only the most relevant information and the single most useful next consideration; ' +
+    'propose ONE small, concrete next step the user can take themselves; then stop and invite their ' +
+    'feedback before going further. Move in small steps, never leaps. Frame what the user does not yet ' +
+    'know as an approachable next move, not a deficiency.\n\n'
+  );
+}
+
 function context(ctx) {
   const tags = ctx.tags?.length
     ? `## Intent tags\n\nThe user chose these tags to direct the vision and intent of this idea — let them steer your interpretation: ${ctx.tags.join(', ')}\n\n`
     : '';
   return (
+    modeGuidance(ctx.mode) +
     tags +
     `## The original Seed (raw idea as the user first wrote it)\n\n${ctx.seed.trim()}\n\n` +
     `## Current Understanding (the evolving interpretation, branch "${ctx.branch}")\n\n` +

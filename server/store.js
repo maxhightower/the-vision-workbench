@@ -109,6 +109,7 @@ export function getSpaceSummary(spaceId) {
     lastOpenedAt: settings.lastOpenedAt,
     currentBranch: settings.currentBranch,
     tags: settings.tags || [],
+    mode: settings.mode || 'solution',
     understandingPreview: understanding.slice(0, 240),
     branchesCount: listBranches(spaceId).length,
     outputsCount: listOutputs(spaceId).length,
@@ -135,6 +136,28 @@ export function setTags(spaceId, tags) {
   return settings;
 }
 
+/** Posture: 'solution' (finish the answer) or 'learning' (accessibility, small steps). */
+export const MODES = ['solution', 'learning'];
+
+export function setMode(spaceId, mode) {
+  if (!MODES.includes(mode)) throw new HttpError(400, `mode must be one of: ${MODES.join(', ')}`);
+  const settings = readSettings(spaceId);
+  settings.mode = mode;
+  writeSettings(spaceId, settings);
+  return settings;
+}
+
+// ---------------------------------------------------------------- web (concept map)
+
+/** The per-space concept web: a graph of kept nodes. Plain JSON, like everything else. */
+export function readWeb(spaceId) {
+  return readJson(path.join(wbDir(spaceId), 'web.json'), { nodes: {}, edges: [] });
+}
+
+export function writeWeb(spaceId, web) {
+  writeJson(path.join(wbDir(spaceId), 'web.json'), web);
+}
+
 export function plantSeed({ seedText, title, tags }) {
   if (!seedText || !seedText.trim()) throw new HttpError(400, 'Seed text is required');
   seedText = seedText.trim();
@@ -156,6 +179,7 @@ export function plantSeed({ seedText, title, tags }) {
     lastOpenedAt: createdAt,
     currentBranch: 'main',
     tags: sanitizeTags(tags),
+    mode: 'solution',
   };
 
   fs.mkdirSync(path.join(dir, '.workbench', 'workstreams'), { recursive: true });

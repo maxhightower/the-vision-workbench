@@ -6,6 +6,7 @@ import { PORT, WORKBENCH_HOME, ensureHome } from './config.js';
 import { HttpError, readJsonBody, sendJson } from './util.js';
 import * as store from './store.js';
 import * as proc from './processes.js';
+import * as web from './web.js';
 import { listWorkstreams, getWorkstream } from './workstreams.js';
 import { readToolShed, writeToolShed, maskToolShed } from './toolshed.js';
 
@@ -60,6 +61,33 @@ const routes = [
       const { tags } = await readJsonBody(req);
       return { tags: store.setTags(id, tags).tags };
     },
+  ],
+
+  [
+    'PUT',
+    /^\/api\/spaces\/([a-z0-9-]+)\/mode$/,
+    async (req, res, [id]) => {
+      const { mode } = await readJsonBody(req);
+      return { mode: store.setMode(id, mode).mode };
+    },
+  ],
+
+  // ---- concept web (kept nodes + the mapper)
+  ['GET', /^\/api\/spaces\/([a-z0-9-]+)\/web$/, (req, res, [id]) => web.getWeb(id)],
+  [
+    'POST',
+    /^\/api\/spaces\/([a-z0-9-]+)\/web\/nodes$/,
+    async (req, res, [id]) => web.keepNode(id, await readJsonBody(req), readToolShed()),
+  ],
+  [
+    'PUT',
+    /^\/api\/spaces\/([a-z0-9-]+)\/web\/nodes\/([a-z0-9-]+)$/,
+    async (req, res, [id, nid]) => web.editNode(id, nid, await readJsonBody(req)),
+  ],
+  [
+    'DELETE',
+    /^\/api\/spaces\/([a-z0-9-]+)\/web\/nodes\/([a-z0-9-]+)$/,
+    (req, res, [id, nid]) => web.deleteNode(id, nid),
   ],
 
   // ---- branches
